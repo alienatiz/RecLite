@@ -12,6 +12,8 @@ def open_source(source):
 
 def main():
     config = load_config()
+    target_w = int(config["frame_width"])
+    target_h = int(config["frame_height"])
     os.makedirs(config["output_dir"], exist_ok=True)
 
     sources = config.get("sources", [0])
@@ -19,6 +21,8 @@ def main():
     cap = open_source(sources[current_source_idx])
     if cap is None:
         return
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, target_w)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, target_h)
 
     out = None
     recording = False
@@ -37,8 +41,14 @@ def main():
                                      alpha=config["contrast"], beta=config["brightness"])
 
         if recording and out:
-            out.write(frame)
             overlay.draw_record_indicator(frame)
+            if frame.shape[1] != target_w or frame.shape[0] != target_h:
+                frame_to_write = cv2.resize(frame, (target_w, target_h))
+            else:
+                frame_to_write = frame
+            if frame_to_write.ndim == 2:
+                frame_to_write = cv2.cvtColor(frame_to_write, cv2.COLOR_GRAY2BGR)
+            out.write(frame_to_write)
 
         overlay.draw_info(frame, config["fps"])
         overlay.draw_help(frame, recording, filter_mode, current_source_idx, len(sources))
@@ -49,9 +59,13 @@ def main():
         if key == 32:
             recording = not recording
             if recording:
-                frame = cv2.resize(frame, (config["frame_width"], config["frame_height"]))
-                out, fname = recorder.init_writer(config)
-                print(f"Recording started: {fname}")
+                try:
+                    out, fname = recorder.init_writer(config)
+                    print(f"Recording started: {fname}")
+                except Exception as e:
+                    print(f"Recording failed: {e}")
+                    recording = False
+                    out = None
             else:
                 if out: out.release()
                 out = None
@@ -78,6 +92,8 @@ def main():
             print(f"🔄 Switching source → {sources[current_source_idx]}")
             cap.release()
             cap = open_source(sources[current_source_idx])
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, target_w)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, target_h)
 
         elif key == 27:
             print("Exit program")
