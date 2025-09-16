@@ -3,45 +3,45 @@ import os
 from utils.config_loader import load_config
 from features import recorder, filters, overlay, screenshot
 
+def open_source(source):
+    cap = cv2.VideoCapture(source)
+    if not cap.isOpened():
+        print(f"Failed to open source: {source}")
+        return None
+    return cap
+
 def main():
     config = load_config()
     os.makedirs(config["output_dir"], exist_ok=True)
 
-    cap = cv2.VideoCapture(config["camera_index"])
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, config["frame_width"])
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, config["frame_height"])
+    sources = config.get("sources", [0])
+    current_source_idx = 0
+    cap = open_source(sources[current_source_idx])
+    if cap is None:
+        return
 
     out = None
     recording = False
     filter_mode = "normal"
 
     print("▶ RecLite started")
-    print("SPACE=Record/Stop | S=Screenshot | 1/2/3=Filters | ESC=Exit")
+    print("SPACE=Record/Stop | S=Screenshot | 1/2/3=Filters | TAB=Switch Source | ESC=Exit")
 
     while True:
         ret, frame = cap.read()
         if not ret:
-            break
+            print("Frame grab failed, retrying...")
+            continue
 
-        frame = filters.apply_filter(
-            frame, mode=filter_mode,
-            alpha=config["contrast"], beta=config["brightness"]
-        )
-        help_texts = [
-            "SPACE = Record/Stop",
-            "S = Screenshot",
-            "1/2/3 = Filters",
-            "ESC = Exit"
-        ]
-        y0 = 30
-        for i, txt in enumerate(help_texts):
-            cv2.putText(frame, txt, (10, y0 + i*30), cv2.FONT_HERSHEY_SIMPLEX,
-                        0.7, (0,255,0), 2)
+        frame = filters.apply_filter(frame, mode=filter_mode,
+                                     alpha=config["contrast"], beta=config["brightness"])
+
         if recording and out:
             out.write(frame)
             overlay.draw_record_indicator(frame)
 
         overlay.draw_info(frame, config["fps"])
+        overlay.draw_help(frame, recording, filter_mode, current_source_idx, len(sources))
         cv2.imshow("RecLite", frame)
 
         key = cv2.waitKey(1) & 0xFF
@@ -50,11 +50,11 @@ def main():
             recording = not recording
             if recording:
                 out, fname = recorder.init_writer(config)
-                print(f"🔴 Recording started: {fname}")
+                print(f"Recording started: {fname}")
             else:
-                out.release()
+                if out: out.release()
                 out = None
-                print("⏹️ Recording stopped")
+                print("Recording stopped")
 
         elif key == ord("s"):
             screenshot.save_screenshot(frame, config["output_dir"])
@@ -72,13 +72,18 @@ def main():
         elif key == ord("6"):
             filter_mode = "flip_v"
 
+        elif key == 9:
+            current_source_idx = (current_source_idx + 1) % len(sources)
+            print(f"🔄 Switching source → {sources[current_source_idx]}")
+            cap.release()
+            cap = open_source(sources[current_source_idx])
+
         elif key == 27:
-            print("🛑 Exit program")
+            print("Exit program")
             break
 
     cap.release()
-    if out:
-        out.release()
+    if out: out.release()
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
