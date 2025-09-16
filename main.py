@@ -49,6 +49,7 @@ def main():
         if key == 32:
             recording = not recording
             if recording:
+                frame = cv2.resize(frame, (config["frame_width"], config["frame_height"]))
                 out, fname = recorder.init_writer(config)
                 print(f"Recording started: {fname}")
             else:
