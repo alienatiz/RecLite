@@ -3,21 +3,14 @@ import cv2
 import numpy as np
 
 def _apply_contrast_brightness(bgr, alpha=1.0, beta=0.0):
-    # alpha: contrast(대비), beta: brightness(밝기)
     return cv2.convertScaleAbs(bgr, alpha=alpha, beta=beta)
 
 def _to_bgr(gray_or_bgr):
-    # 입력이 그레이(2D)면 BGR로 변환해 3채널을 보장
     if len(gray_or_bgr.shape) == 2:
         return cv2.cvtColor(gray_or_bgr, cv2.COLOR_GRAY2BGR)
     return gray_or_bgr
 
 def apply_filter(frame, mode="normal", alpha=1.2, beta=20):
-    """
-    mode: "normal" | "gray" | "canny" | "sepia" | "flip_h" | "flip_v"
-    항상 BGR 3채널(np.uint8) 반환
-    """
-    # 기본 밝기/대비 먼저 적용
     img = _apply_contrast_brightness(frame, alpha=alpha, beta=beta)
 
     if mode == "normal":
@@ -40,11 +33,10 @@ def apply_filter(frame, mode="normal", alpha=1.2, beta=20):
         img = np.clip(img, 0, 255).astype(np.uint8)
 
     elif mode == "flip_h":
-        img = cv2.flip(img, 1)   # 좌우 반전
+        img = cv2.flip(img, 1)
 
     elif mode == "flip_v":
-        img = cv2.flip(img, 0)   # 상하 반전
+        img = cv2.flip(img, 0)
 
-    # 최종적으로 BGR 3채널 보장
     img = _to_bgr(img)
     return img
