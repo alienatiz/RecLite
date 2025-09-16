@@ -1,4 +1,6 @@
-camera_index: 0
+sources:
+  - 0   # 기본 웹캠
+  - rtsp://210.99.70.120:1935/live/cctv007.stream
 output_dir: "outputs"
 fps: 20.0
 frame_width: 640
