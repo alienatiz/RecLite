@@ -27,6 +27,7 @@ def main():
     out = None
     recording = False
     filter_mode = "normal"
+    base_flip = True
 
     print("▶ RecLite started")
     print("SPACE=Record/Stop | S=Screenshot | 1/2/3=Filters | TAB=Switch Source | ESC=Exit")
@@ -36,6 +37,9 @@ def main():
         if not ret:
             print("Frame grab failed, retrying...")
             continue
+
+        if base_flip:
+            frame = cv2.flip(frame, 1)
 
         frame = filters.apply_filter(frame, mode=filter_mode,
                                      alpha=config["contrast"], beta=config["brightness"])
@@ -52,6 +56,7 @@ def main():
 
         overlay.draw_info(frame, config["fps"])
         overlay.draw_help(frame, recording, filter_mode, current_source_idx, len(sources))
+        overlay.draw_filters_bar(frame)
         cv2.imshow("RecLite", frame)
 
         key = cv2.waitKey(1) & 0xFF
@@ -83,7 +88,7 @@ def main():
         elif key == ord("4"):
             filter_mode = "sepia"
         elif key == ord("5"):
-            filter_mode = "flip_h"
+            base_flip = not base_flip
         elif key == ord("6"):
             filter_mode = "flip_v"
 
