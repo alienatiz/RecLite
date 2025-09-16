@@ -1,0 +1,8 @@
+camera_index: 0
+output_dir: "outputs"
+fps: 20.0
+frame_width: 640
+frame_height: 480
+codec: "XVID"
+brightness: 20
+contrast: 1.2
